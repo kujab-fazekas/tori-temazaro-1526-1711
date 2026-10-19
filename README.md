@@ -23,6 +23,7 @@ A haladást a böngésző tárolja (localStorage), szerver nincs.
 index.html          az oldal váza
 css/style.css       megjelenés
 js/app.js           az alkalmazás logikája
+js/map.js           a térkép: rajzolás, címke-elhelyezés, térképkvízek
 js/data/c1–c5.js    a fejezetek tartalma és kérdései
 js/data/sources.js  a kötelező források
 js/data/essays.js   az esszétémák

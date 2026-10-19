@@ -114,7 +114,7 @@ function home(){
   '<section class="wrap">'+
     '<h2>Ami a témazárón lesz</h2>'+
     '<div class="exam">'+
-      '<a href="#/terkep"><b>A</b><span>Térkép: '+PLACES.length+' helyszín, kvízzel</span></a>'+
+      '<a href="#/terkep"><b>A</b><span>Térkép: '+TOPO.rivers.length+' folyó, '+PLACES.length+' helyszín, 4 kvíz</span></a>'+
       '<a href="#/forrasok"><b>B</b><span>6 kötelező forrás jegyzettel és elemzéssel</span></a>'+
       '<a href="#/esszek"><b>C</b><span>8 esszétéma vázlattal és íróedzéssel</span></a>'+
     '</div>'+
@@ -130,7 +130,7 @@ function home(){
       '<a class="tool" href="#/idorend"><strong>Időrend</strong><small>Rakd sorba az eseményeket</small></a>'+
       '<a class="tool" href="#/idovonal"><strong>Idővonal</strong><small>Minden évszám egy helyen</small></a>'+
       '<a class="tool" href="#/fogalomtar"><strong>Fogalomtár</strong><small>Kereshető fogalmak és személyek</small></a>'+
-      '<a class="tool" href="#/terkep/kviz"><strong>Térképkvíz</strong><small>Hol van?</small></a>'+
+      '<a class="tool" href="#/terkep/folyo"><strong>Folyókvíz</strong><small>Melyik folyó ez?</small></a>'+
     '</div>'+
     foot()+
   '</section>';
@@ -252,7 +252,7 @@ function renderQ(){
 function quizResult(){
   var n=Q.ids.length, pct=n?Math.round(Q.right/n*100):0;
   if (Q.store){ var o=S.quiz[Q.store]||{best:0,runs:0}; o.best=Math.max(o.best,pct); o.last=pct; o.runs++; S.quiz[Q.store]=o; save(); }
-  var verdict = pct>=90?'Ez már témazáró-szint.':pct>=70?'Jó alap, a hibásakat ismételd át.':pct>=50?'Félúton vagy. Olvasd újra a fejezetet, aztán jöhet még egy kör.':'Kezdd a fejezet elolvasásával, utána próbáld újra.';
+  var verdict = pct>=90?'Ez már témazáró-szint.':pct>=70?'Jó alap, a hibásakat ismételd át.':pct>=50?'Félúton vagy. Olvasd újra a fejezetet, utána jöhet még egy kör.':'Kezdd a fejezet elolvasásával, utána próbáld újra.';
   var wr=Q.wrongs.filter(function(v,i,a){ return a.indexOf(v)===i; });
   app.innerHTML='<section class="wrap">'+
     '<div class="qtop"><a href="'+Q.back+'">Vissza</a><span>'+esc(Q.title)+'</span><span></span></div>'+
@@ -418,76 +418,8 @@ function write(id){
 }
 function fmt(s){ s=Math.max(0,s|0); return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2); }
 
-/* ---------- Térkép ---------- */
-function P(lat,lon){ return [((lon-15.8)*67.9).toFixed(1), ((49.8-lat)*100).toFixed(1)]; }
-function poly(pts){ return pts.map(function(p){ return P(p[0],p[1]).join(','); }).join(' '); }
-function mapSvg(opt){
-  var s='<svg viewBox="0 0 740 545" role="img" aria-label="Vázlatos térkép a Kárpát-medencéről">';
-  s+='<polygon points="'+poly(GEO.border)+'" fill="'+(opt.regions?'var(--green-tint)':'var(--paper)')+'" stroke="var(--ink-2)" stroke-width="1.5" stroke-linejoin="round"/>';
-  if (opt.regions){
-    s+='<polygon points="'+poly(GEO.hodoltsag)+'" fill="var(--ochre-tint)" stroke="var(--ochre)" stroke-width="1.2" stroke-dasharray="5 4"/>';
-    s+='<polygon points="'+poly(GEO.erdely)+'" fill="var(--slate-tint)" stroke="var(--slate)" stroke-width="1.2" stroke-dasharray="5 4"/>';
-  }
-  Object.keys(GEO.rivers).forEach(function(k){
-    var pts=GEO.rivers[k];
-    if (k==='Balaton') s+='<polygon points="'+poly(pts)+'" fill="var(--slate)" opacity=".55"/>';
-    else s+='<polyline points="'+poly(pts)+'" fill="none" stroke="var(--slate)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".75"/>';
-  });
-  var rl={Duna:[46.55,18.95],Tisza:[47.05,20.24],'Dráva':[45.82,17.6],Maros:[46.0,22.3]};
-  Object.keys(rl).forEach(function(k){ var p=P(rl[k][0],rl[k][1]); s+='<text x="'+p[0]+'" y="'+p[1]+'" font-size="13" font-style="italic" fill="var(--slate)" font-family="Alegreya, serif">'+k+'</text>'; });
-  PLACES.forEach(function(pl,i){
-    if (opt.filter && pl[4]!==opt.filter) return;
-    var p=P(pl[1],pl[2]);
-    s+='<g class="dot" data-i="'+i+'" tabindex="0" role="button" aria-label="'+(opt.quiz?'helyszín':esc(pl[0]))+'"><circle cx="'+p[0]+'" cy="'+p[1]+'" r="15" fill="transparent"/><circle class="pt" cx="'+p[0]+'" cy="'+p[1]+'" r="5.5" fill="var(--ink)" stroke="var(--panel)" stroke-width="2"/>'+
-      (opt.labels&&!opt.quiz?'<text x="'+(+p[0]+8)+'" y="'+(+p[1]+4)+'" font-size="12" fill="var(--ink)" font-family="Alegreya Sans, sans-serif">'+esc(pl[0])+'</text>':'')+'</g>';
-  });
-  return s+'</svg>';
-}
-function mapPage(mode){
-  nav('map');
-  var st={regions:true, labels:false, filter:null, quiz:mode==='kviz'};
-  function chips(){ return '<div class="seg-ctl" id="flt"><button data-f="" class="'+(!st.filter?'on':'')+'">Mind</button>'+CH.map(function(c){ return '<button data-f="'+c.id+'" class="'+(st.filter===c.id?'on':'')+'">'+c.n+'. fejezet</button>'; }).join('')+'</div>'; }
-  function render(){
-    app.innerHTML='<section class="wrap"><h1 style="margin-top:28px">Térkép</h1>'+
-      '<div class="seg-ctl"><button id="m1" class="'+(!st.quiz?'on':'')+'">Felfedezés</button><button id="m2" class="'+(st.quiz?'on':'')+'">Kvíz: hol van?</button></div>'+
-      (st.quiz?'':chips()+'<div class="seg-ctl"><button id="rg" class="'+(st.regions?'on':'')+'">Hármas tagolódás (1570 körül)</button><button id="lb" class="'+(st.labels?'on':'')+'">Nevek</button></div>')+
-      '<div class="mapbox">'+mapSvg(st)+'<div class="mapinfo" id="mi" aria-live="polite"></div></div>'+
-      (st.regions&&!st.quiz?'<div class="legend"><span><i style="background:var(--green-tint)"></i>Királyi Magyarország</span><span><i style="background:var(--ochre-tint)"></i>Hódoltság</span><span><i style="background:var(--slate-tint)"></i>Erdély és Partium</span></div>':'')+
-      '<p class="small muted">Vázlatos térkép: a folyók és a határok közelítőek, a helyszínek valós koordinátákon vannak. A témazáróra a tankönyvi térképeken is gyakorolj.</p>'+
-      (st.quiz?'':'<h2>Helyszínek</h2><dl class="gl">'+PLACES.filter(function(p){ return !st.filter||p[4]===st.filter; }).map(function(p){ return '<dt>'+esc(p[0])+'</dt><dd>'+esc(p[3])+'</dd>'; }).join('')+'</dl>')+
-    '</section>';
-    $('#m1').addEventListener('click', function(){ location.hash='#/terkep'; });
-    $('#m2').addEventListener('click', function(){ location.hash='#/terkep/kviz'; });
-    if (!st.quiz){
-      $('#rg').addEventListener('click', function(){ st.regions=!st.regions; render(); });
-      $('#lb').addEventListener('click', function(){ st.labels=!st.labels; render(); });
-      $$('#flt button').forEach(function(b){ b.addEventListener('click', function(){ st.filter=b.getAttribute('data-f')||null; render(); }); });
-      $('#mi').innerHTML='<span class="muted">Koppints egy pontra.</span>';
-      $$('.dot').forEach(function(g){ var h=function(){ var pl=PLACES[+g.getAttribute('data-i')]; $$('.pt').forEach(function(c){ c.setAttribute('fill','var(--ink)'); c.setAttribute('r','5.5'); }); var c=g.querySelector('.pt'); c.setAttribute('fill','var(--red)'); c.setAttribute('r','8'); $('#mi').innerHTML='<b>'+esc(pl[0])+'</b> – '+esc(pl[3])+' <a href="#/fejezet/'+pl[4]+'" class="small">('+chById(pl[4]).n+'. fejezet)</a>'; };
-        g.addEventListener('click',h); g.addEventListener('keydown',function(ev){ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); h(); } }); });
-    } else quizMap();
-  }
-  function quizMap(){
-    var order=shuffle(PLACES.map(function(_,i){ return i; })).slice(0,10), k=0, ok=0, locked=false;
-    function ask(){
-      if (k>=order.length){ S.misc.mapBest=Math.max(S.misc.mapBest||0,ok); save(); $('#mi').innerHTML='<b>Eredmény: '+ok+' / '+order.length+'</b>'+(S.misc.mapBest?' (rekord: '+S.misc.mapBest+')':'')+' <button class="btn sm" id="again" style="margin-left:8px">Új kör</button>'; $('#again').addEventListener('click', function(){ render(); }); return; }
-      var t=PLACES[order[k]]; locked=false;
-      $$('.pt').forEach(function(c){ c.setAttribute('fill','var(--ink)'); c.setAttribute('r','5.5'); });
-      $('#mi').innerHTML='<span class="num muted">'+(k+1)+' / '+order.length+'</span> &nbsp;Hol van: <b style="font-size:1.2rem">'+esc(t[0])+'</b>?';
-    }
-    $$('.dot').forEach(function(g){ var h=function(){
-      if (locked || k>=order.length) return; locked=true;
-      var i=+g.getAttribute('data-i'), t=order[k], good=(i===t);
-      var tc=$('.dot[data-i="'+t+'"] .pt'); tc.setAttribute('fill','var(--green)'); tc.setAttribute('r','9');
-      if (!good){ var c=g.querySelector('.pt'); c.setAttribute('fill','var(--red)'); c.setAttribute('r','8'); }
-      if (good) ok++;
-      $('#mi').innerHTML=(good?'<b style="color:var(--green)">Talált.</b> ':'<b style="color:var(--red)">Nem ez</b> (ez '+esc(PLACES[i][0])+'). ')+'<b>'+esc(PLACES[t][0])+'</b>: '+esc(PLACES[t][3])+' <button class="btn sm" id="nq" style="margin-left:8px">Tovább</button>';
-      $('#nq').addEventListener('click', function(){ k++; ask(); }); $('#nq').focus();
-    }; g.addEventListener('click',h); g.addEventListener('keydown',function(ev){ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); h(); } }); });
-    ask();
-  }
-  render();
-}
+/* ---------- Térkép: a js/map.js modulban ---------- */
+var mapPage = MAPMOD({$:$, $$:$$, esc:esc, shuffle:shuffle, chById:chById, nav:nav, save:save, app:app, S:function(){ return S; }});
 
 /* ---------- Idővonal ---------- */
 function timeline(){
@@ -574,6 +506,7 @@ function glossary(){
 /* ---------- Útvonalak ---------- */
 function route(){
   if (timerInt){ clearInterval(timerInt); timerInt=null; }
+  document.body.classList.remove('mapfs');
   var h=location.hash.replace(/^#\/?/,''), p=h.split('/');
   window.scrollTo(0,0);
   switch(p[0]){
