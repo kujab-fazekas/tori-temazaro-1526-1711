@@ -46,7 +46,7 @@ var TL = [
 [1690,'Diploma Leopoldinum (1690/91)','c4'],
 [1697,'Zenta (Savoyai Jenő)','c4'],
 [1699,'Karlócai béke (Temesköz nélkül)','c4'],
-[1700,'Rákóczi levelé XIV. Lajosnak → bécsújhelyi börtön','c5'],
+[1700,'Rákóczi levele XIV. Lajosnak → bécsújhelyi börtön','c5'],
 [1701,'A spanyol örökösödési háború kezdete (–1714)','c5'],
 [1703,'A szabadságharc kitörése, Rákóczi hazatér','c5'],
 [1704,'Höchstädt; Rákóczi válasza kérvényező katonáinak','c5'],
