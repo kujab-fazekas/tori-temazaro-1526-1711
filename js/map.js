@@ -5,7 +5,7 @@ function MAPMOD(H){
 var $=H.$, $$=H.$$, esc=H.esc, shuffle=H.shuffle, chById=H.chById, nav=H.nav, save=H.save, app=H.app;
 
 /* ---------- Térkép (a tanári vaktérkép folyóival) ---------- */
-var CATS=[['all','Mind'],['vilajet','Vilájetközpontok'],['vegvar','Végvárak'],['tarnoki','Tárnoki városok'],['koztort','Köztörténet'],['puspok','Püspöki székhelyek'],['egyeb','Tananyagból']];
+var CATS=[['all','Mind'],['lap','A lapról'],['vilajet','Vilájetközpontok'],['vegvar','Végvárak'],['tarnoki','Tárnoki városok'],['koztort','Köztörténet'],['puspok','Püspöki székhelyek'],['egyeb','Tananyagból']];
 var TOPOLIST=[
  ['Vilájetközpontok','vilajet',[['Buda','1541, 1686'],['Temesvár','1552'],['Eger','1596'],['Kanizsa','1600'],['Várad','1660'],['Érsekújvár','1663']]],
  ['Végvárak','vegvar',[['Kőszeg','1532'],['Temesvár','1552'],['Drégely','1552'],['Szolnok','1552'],['Eger','1552, 1596'],['Gyula','1566'],['Szigetvár','1566']]],
@@ -33,6 +33,8 @@ function nearestRiver(p){
   return {i:best, d:bd};
 }
 function placeByName(n){ for (var i=0;i<PLACES.length;i++) if (PLACES[i].n===n) return i; return -1; }
+// 'lap' = csak a tanári topográfiai lapon szereplő helyek (minden, ami nem kizárólag 'egyeb')
+function inCat(p,c){ return c==='all' || (c==='lap' ? p.c.join()!=='egyeb' : p.c.indexOf(c)>=0); }
 function catLabel(c){ for (var i=0;i<CATS.length;i++) if (CATS[i][0]===c) return CATS[i][1]; return c; }
 /* címkék elhelyezése: szövegszélesség, folyómenti mintapontok, vonal-ütközésvizsgálat */
 var TW=null;
@@ -94,7 +96,7 @@ function mapPage(mode){
   st.mode=({kviz:'hol',folyo:'folyo',mi:'mi',keres:'keres'})[mode]||'explore';
   st.vb={x:0,y:0,w:TOPO.W,h:TOPO.H}; st.sel=null; st.hl=null; st.hlR=null; st.fs=false; document.body.classList.remove('mapfs');
   var quiz=null;
-  function visible(p){ return st.cat==='all' || p.c.indexOf(st.cat)>=0; }
+  function visible(p){ return inCat(p,st.cat); }
   function svgMarkup(){
     var s='<svg id="msvg" viewBox="0 0 '+TOPO.W+' '+TOPO.H+'" role="img" aria-label="Magyarország 1526–1711: vaktérkép folyókkal és helyszínekkel">';
     s+='<rect x="0" y="0" width="'+TOPO.W+'" height="'+TOPO.H+'" fill="var(--panel)"/>';
@@ -124,7 +126,7 @@ function mapPage(mode){
     s+='<g id="g-places">'+PLACES.map(function(p,i){ return '<g class="pl" data-i="'+i+'"><circle cx="'+p.x+'" cy="'+p.y+'" r="5" fill="var(--ink)" stroke="var(--panel)"/><text class="pn" font-family="Alegreya Sans, sans-serif" fill="var(--ink)" stroke="var(--panel)" stroke-linejoin="round" paint-order="stroke" text-anchor="'+p.la+'">'+esc(p.n)+'</text></g>'; }).join('')+'</g>';
     return s+'</svg>';
   }
-  function chipsCats(){ return '<div class="seg-ctl" id="cats">'+CATS.map(function(c){ var n=c[0]==='all'?PLACES.length:PLACES.filter(function(p){ return p.c.indexOf(c[0])>=0; }).length; return '<button data-c="'+c[0]+'" class="'+(st.cat===c[0]?'on':'')+'">'+c[1]+' <span class="muted">'+n+'</span></button>'; }).join('')+'</div>'; }
+  function chipsCats(){ return '<div class="seg-ctl" id="cats">'+CATS.map(function(c){ var n=PLACES.filter(function(p){ return inCat(p,c[0]); }).length; return '<button data-c="'+c[0]+'" class="'+(st.cat===c[0]?'on':'')+'">'+c[1]+' <span class="muted">'+n+'</span></button>'; }).join('')+'</div>'; }
   function chipsLayers(){ return '<div class="seg-ctl" id="lays">'+LAYERS.map(function(l){ return '<button data-l="'+l[0]+'" class="'+(st.layers[l[0]]?'on':'')+'">'+l[1]+'</button>'; }).join('')+'</div>'; }
   function render(){
     var modes=[['explore','Felfedezés','#/terkep'],['hol','Hol van?','#/terkep/kviz'],['mi','Melyik hely ez?','#/terkep/mi'],['folyo','Melyik folyó?','#/terkep/folyo'],['keres','Hol folyik?','#/terkep/keres']];
