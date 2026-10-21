@@ -232,3 +232,8 @@ textarea.essay:focus{border-color:var(--green);outline:none}
 .hidden{display:none !important}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 footer{margin:40px 0 10px;font-size:.82rem;color:var(--ink-2)}
+
+.qn{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.qn .seg-ctl{margin:6px 0;align-items:center}
+#qnum{width:72px;padding:6px 10px;border-radius:999px;border:1.5px solid var(--rule);background:var(--panel);color:var(--ink);font:inherit;font-size:.92rem;text-align:center}
+#qnum:focus{outline:2px solid var(--green);outline-offset:1px}
