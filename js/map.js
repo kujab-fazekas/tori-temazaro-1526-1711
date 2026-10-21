@@ -95,8 +95,14 @@ function mapPage(mode){
   var st=MAPST||(MAPST={cat:'all', layers:{names:true,rnames:true,erdely:false,partium:false,hajdu:false,banat:false,harmas:false}});
   st.mode=({kviz:'hol',folyo:'folyo',mi:'mi',keres:'keres'})[mode]||'explore';
   st.vb={x:0,y:0,w:TOPO.W,h:TOPO.H}; st.sel=null; st.hl=null; st.hlR=null; st.fs=false; document.body.classList.remove('mapfs');
+  if (st.qn==null){ var q0=H.S().misc['map-n']; st.qn=(q0===0||q0>0)?q0:10; }
   var quiz=null;
   function visible(p){ return inCat(p,st.cat); }
+  function placeMode(){ return st.mode==='hol'||st.mode==='mi'; }
+  function qMax(){ return placeMode()?PLACES.filter(visible).length:TOPO.rivers.length+TOPO.lakes.length; }
+  function chipsN(){ var pre=[5,10,20,0], cur=st.qn, isPre=pre.indexOf(cur)>=0;
+    return '<div class="qn"><span class="small muted">Kérdések száma:</span><div class="seg-ctl" id="qn">'+pre.map(function(n){ return '<button data-n="'+n+'" class="'+(cur===n?'on':'')+'">'+(n===0?'Mind <span class="muted" id="qall">'+qMax()+'</span>':n)+'</button>'; }).join('')+
+      '<input type="number" id="qnum" min="1" max="'+qMax()+'" inputmode="numeric" placeholder="más" aria-label="Egyéni kérdésszám" value="'+(isPre?'':cur)+'"></div></div>'; }
   function svgMarkup(){
     var s='<svg id="msvg" viewBox="0 0 '+TOPO.W+' '+TOPO.H+'" role="img" aria-label="Magyarország 1526–1711: vaktérkép folyókkal és helyszínekkel">';
     s+='<rect x="0" y="0" width="'+TOPO.W+'" height="'+TOPO.H+'" fill="var(--panel)"/>';
@@ -134,6 +140,7 @@ function mapPage(mode){
       '<p class="small muted" style="margin:.2rem 0 .4rem">A folyók a tanári vaktérképről (11B_00) vannak átrajzolva: ugyanazt a folyóhálózatot látod, mint a dolgozatban.</p>'+
       '<div class="seg-ctl">'+modes.map(function(m){ return '<a href="'+m[2]+'" class="'+(st.mode===m[0]?'on':'')+'">'+m[1]+'</a>'; }).join('')+'</div>'+
       (st.mode==='folyo'||st.mode==='keres'?'':chipsCats())+
+      (st.mode==='explore'?'':chipsN())+
       (st.mode==='explore'?chipsLayers():'')+
       '<div class="mapbox"><div class="mapwrap">'+svgMarkup()+'<div class="mapctl"><button id="zin" aria-label="Nagyítás">+</button><button id="zout" aria-label="Kicsinyítés">−</button><button id="zres" aria-label="Az egész térkép" title="Az egész térkép">⤢</button><button id="zfs" aria-label="Teljes képernyő" title="Teljes képernyő"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4"/></svg></button></div></div><div class="mapinfo" id="mi" aria-live="polite"></div></div>'+
       '<button class="btn sm fsbtn" id="zfs2">Térkép teljes képernyőn</button>'+
@@ -311,8 +318,15 @@ function mapPage(mode){
       st.sel=null; highlightRiver(null); applyView(); info('<span class="muted">Itt nincs jelölt hely. Koppints egy pontra vagy folyóra.</span>');
     } else if (quiz && quiz.onTap) quiz.onTap(m,k);
   }
+  function updQN(){ var a=$('#qall'); if (a) a.textContent=qMax(); var i=$('#qnum'); if (i) i.max=qMax(); }
+  function setQN(n){ st.qn=n; H.S().misc['map-n']=n; save();
+    $$('#qn button').forEach(function(x){ x.classList.toggle('on', +x.getAttribute('data-n')===n); });
+    var i=$('#qnum'); if (i){ var isPre=[5,10,20,0].indexOf(n)>=0; i.value=isPre?'':Math.min(n,qMax()); }
+    startQuiz(); }
   function bind(){
-    $$('#cats button').forEach(function(b){ b.addEventListener('click', function(){ st.cat=b.getAttribute('data-c'); st.sel=null; $$('#cats button').forEach(function(x){ x.classList.toggle('on', x===b); }); applyLayers(); applyView(); if (st.mode!=='explore') startQuiz(); }); });
+    $$('#cats button').forEach(function(b){ b.addEventListener('click', function(){ st.cat=b.getAttribute('data-c'); st.sel=null; $$('#cats button').forEach(function(x){ x.classList.toggle('on', x===b); }); applyLayers(); applyView(); if (st.mode!=='explore'){ updQN(); startQuiz(); } }); });
+    $$('#qn button').forEach(function(b){ b.addEventListener('click', function(){ setQN(+b.getAttribute('data-n')); }); });
+    var qi=$('#qnum'); if (qi) qi.addEventListener('change', function(){ var v=Math.round(+qi.value); if (!(v>=1)){ qi.value=''; return; } setQN(v); });
     $$('#lays button').forEach(function(b){ b.addEventListener('click', function(){ var l=b.getAttribute('data-l'); st.layers[l]=!st.layers[l]; b.classList.toggle('on', st.layers[l]); applyLayers(); applyView(); }); });
     $('#zin').addEventListener('click', function(){ zoomAt(1.6, st.vb.x+st.vb.w/2, st.vb.y+st.vb.h/2); });
     $('#zout').addEventListener('click', function(){ zoomAt(1/1.6, st.vb.x+st.vb.w/2, st.vb.y+st.vb.h/2); });
@@ -337,11 +351,11 @@ function mapPage(mode){
   /* --- kvízek --- */
   function startQuiz(){
     highlightRiver(null); st.sel=null; applyView();
-    var N=10, k0=0, ok=0, locked=false, order;
+    var N=st.qn===0?1e9:st.qn, k0=0, ok=0, locked=false, order;
     var pool=PLACES.map(function(_,i){ return i; }).filter(function(i){ return visible(PLACES[i]); });
     var rpool=TOPO.rivers.map(function(_,i){ return i; }).concat(TOPO.lakes.map(function(_,j){ return 'L'+j; }));
-    if (st.mode==='hol'||st.mode==='mi') order=shuffle(pool).slice(0,Math.min(N,pool.length)); else order=shuffle(rpool).slice(0,N);
-    function done(){ var key='map-'+st.mode+'-'+st.cat; H.S().misc[key]=Math.max(H.S().misc[key]||0,ok); save(); quiz=null;
+    if (st.mode==='hol'||st.mode==='mi') order=shuffle(pool).slice(0,Math.min(N,pool.length)); else order=shuffle(rpool).slice(0,Math.min(N,rpool.length));
+    function done(){ var key='map-'+st.mode+'-'+st.cat+'-'+order.length; H.S().misc[key]=Math.max(H.S().misc[key]||0,ok); save(); quiz=null;
       info('<b>Eredmény: '+ok+' / '+order.length+'</b> <span class="small muted">(rekord: '+H.S().misc[key]+')</span> <button class="btn sm" id="again" style="margin-left:8px">Új kör</button>'); $('#again').addEventListener('click', startQuiz); }
     function next(){ k0++; if (k0>=order.length) return done(); ask(); }
     function nxBtn(){ return ' <button class="btn sm" id="nq" style="margin-left:8px">Tovább</button>'; }
